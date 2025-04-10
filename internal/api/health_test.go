@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"bank-app/internal/api"
+	repo "bank-app/internal/repository"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,10 +17,11 @@ func TestGetHealthCheck(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health-check", nil)
 	w := httptest.NewRecorder()
 
-	s := api.NewServer()
+	s := api.NewServer(&repo.MockRepository{})
 	s.GetHealthCheck(w, req)
 
 	resp := w.Result()
+
 	_, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 

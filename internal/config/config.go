@@ -11,6 +11,6 @@ func FromEnv() Config {
 	return Config{
 		HTTPAddr:    ":8080",
 		MirationDir: "internal/db/migrations/",
-		PG_DSN:      "postgres://username:password@localhost:5432/wallet_restapi",
+		PG_DSN:      "postgres://joellau:password@localhost:5432/wallet_restapi",
 	}
 }

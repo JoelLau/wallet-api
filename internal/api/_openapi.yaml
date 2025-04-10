@@ -112,7 +112,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetWalletResponse"
+                $ref: "#/components/schemas/GetWalletBalanceResponse"
 
   /api/v1/wallets/{wallet_id}/transactions:
     get:
@@ -141,8 +141,6 @@ components:
       type: object
       properties:
         id:
-          type: string
-        name:
           type: string
         created_at:
           type: string
@@ -199,7 +197,7 @@ components:
           type: string
           format: date-time
 
-    GetWalletResponse:
+    GetWalletBalanceResponse:
       type: object
       properties:
         wallet_id:

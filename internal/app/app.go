@@ -3,7 +3,7 @@ package app
 import (
 	"bank-app/internal/api"
 	genapi "bank-app/internal/api/gen"
-	"bank-app/internal/config"
+	db "bank-app/internal/db/gen"
 	"context"
 	"errors"
 	"log/slog"
@@ -15,12 +15,13 @@ import (
 )
 
 type App struct {
-	cfg  config.Config
+	cfg Config
+
 	logr *slog.Logger
 }
 
-func NewApp(cfg config.Config, opts ...OptFunc) *App {
-	app := &App{cfg: cfg}
+func NewApp(cfg Config, opts ...OptFunc) *App {
+	app := &App{cfg: cfg, logr: slog.Default()}
 
 	for _, opt := range opts {
 		opt(app)
@@ -29,34 +30,41 @@ func NewApp(cfg config.Config, opts ...OptFunc) *App {
 	return app
 }
 
-func (a *App) Run(ctx context.Context) error {
+func (app *App) Run(ctx context.Context) error {
 	cctx := context.WithoutCancel(ctx)
 
-	server := api.NewServer()
+	server := api.NewServer(db.New(app.cfg.DBTX))
 
+	httpServer := &http.Server{
+		Handler: NewHandler(server),
+		Addr:    app.cfg.Addr,
+	}
+
+	if err := httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
+		app.logr.InfoContext(cctx, "server shutdown")
+		return nil
+	} else if err != nil {
+		app.logr.ErrorContext(cctx, "unexpected server error", slog.Any("error", err))
+		return err
+	}
+
+	return nil
+}
+
+func NewHandler(server genapi.ServerInterface) http.Handler {
+	return genapi.HandlerFromMux(server, NewRouter())
+}
+
+func NewRouter() *chi.Mux {
 	r := chi.NewMux()
 
+	// recommended middleware stack.
+	// see more: https://github.com/go-chi/chi/blob/d7034fdfdaefd10f1bc1a7b813bc979f2eda3a36/README.md?plain=1#L86-L95
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(2 * time.Second))
 
-	h := genapi.HandlerFromMux(server, r)
-
-	s := &http.Server{
-		Handler: h,
-		Addr:    a.cfg.HTTPAddr,
-	}
-
-	err := s.ListenAndServe()
-	if errors.Is(err, http.ErrServerClosed) {
-		a.logr.InfoContext(cctx, "server shutdown")
-		return nil
-	} else if err != nil {
-		a.logr.ErrorContext(cctx, "unexpected server error", slog.Any("error", err))
-		return err
-	}
-
-	return nil
+	return r
 }
