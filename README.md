@@ -12,10 +12,11 @@
 
 ### Commands
 
-| Remarks         | Commands                  |
-| --------------- | ------------------------- |
-| Generate Files  | `go generate ./...`       |
-| Run HTTP Server | `go run cmd/app/main.go`  |
-| Run Tests       | `go test -v -cover ./...` |
-| Run Linter      | `golangci-lint run`       |
-| Fix Lint Issues | `golangci-lint run --fix` |
+| Remarks           | Commands                     |
+| ----------------- | ---------------------------- |
+| Generate Files    | `go generate ./...`          |
+| Run DB Migrations | `go run cmd/migrate/main.go` |
+| Run HTTP Server   | `go run cmd/app/main.go`     |
+| Run Tests         | `go test -v -cover ./...`    |
+| Run Linter        | `golangci-lint run`          |
+| Fix Lint Issues   | `golangci-lint run --fix`    |

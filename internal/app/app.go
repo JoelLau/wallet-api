@@ -3,6 +3,7 @@ package app
 import (
 	"bank-app/internal/api"
 	genapi "bank-app/internal/api/gen"
+	"bank-app/internal/config"
 	"context"
 	"errors"
 	"log/slog"
@@ -14,11 +15,11 @@ import (
 )
 
 type App struct {
-	cfg  Config
+	cfg  config.Config
 	logr *slog.Logger
 }
 
-func NewApp(cfg Config, opts ...OptFunc) *App {
+func NewApp(cfg config.Config, opts ...OptFunc) *App {
 	app := &App{cfg: cfg}
 
 	for _, opt := range opts {
@@ -45,7 +46,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	s := &http.Server{
 		Handler: h,
-		Addr:    a.cfg.Addr,
+		Addr:    a.cfg.HTTPAddr,
 	}
 
 	err := s.ListenAndServe()
