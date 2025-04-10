@@ -1,0 +1,218 @@
+openapi: 3.0.3
+info:
+  title: Centralized Wallet API
+  version: 1.0.0
+  description: API for managing deposits, withdrawals, transfers, balances, and transaction history in a centralized wallet system.
+paths:
+  /health-check:
+    get:
+      summary: Check Server Health
+      operationId: GetHealthCheck
+      responses:
+        "200":
+          description: should always return OK
+
+  /api/v1/wallets:
+    post:
+      summary: Create New Wallet
+      operationId: CreateWallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWalletRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateWalletResponse"
+
+  /api/v1/wallets/{wallet_id}/deposit:
+    post:
+      summary: Create Deposit Transaction
+      operationId: CreateWalletDeposit
+      parameters:
+        - name: wallet_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDepositRequest"
+      responses:
+        "200":
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTransactionResponse"
+
+  /api/v1/wallets/{wallet_id}/withdraw:
+    post:
+      summary: Create Withdraw Transaction
+      operationId: CreateWalletWithdrawal
+      parameters:
+        - name: wallet_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWithdrawalRequest"
+      responses:
+        "200":
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTransactionResponse"
+
+  /api/v1/transfer:
+    post:
+      summary: Create Transfer Between Wallets
+      operationId: CreateTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransferRequest"
+      responses:
+        "200":
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTransactionResponse"
+
+  /api/v1/wallets/{wallet_id}/balance:
+    get:
+      summary: Get Wallet Info (incl. Balance)
+      operationId: GetWalletBalance
+      parameters:
+        - name: wallet_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wallet Details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetWalletResponse"
+
+  /api/v1/wallets/{wallet_id}/transactions:
+    get:
+      summary: Get User's Transaction History
+      operationId: GetWalletTransactions
+      parameters:
+        - name: wallet_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTransactionsResponse"
+
+components:
+  schemas:
+    CreateWalletRequest:
+      type: object
+
+    CreateWalletResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateDepositRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+      required:
+        - amount
+
+    CreateWithdrawalRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+      required:
+        - amount
+
+    CreateTransferRequest:
+      type: object
+      properties:
+        sender_wallet_id:
+          type: string
+        receiver_wallet_id:
+          type: string
+        amount:
+          type: number
+          format: float
+      required:
+        - sender_wallet_id
+        - receiver_wallet_id
+        - amount
+
+    CreateTransactionResponse:
+      type: object
+      properties:
+        transaction_id:
+          type: string
+        wallet_id:
+          type: string
+        type:
+          type: string
+          enum: [deposit, withdraw, transfer]
+        amount:
+          type: number
+        balance_after:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    GetWalletResponse:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+        balance:
+          type: number
+
+    GetTransactionsResponse:
+      type: object
+      properties:
+        wallet_id:
+          type: string
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateTransactionResponse"
