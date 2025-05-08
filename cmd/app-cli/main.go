@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bank-app/internal/app"
+	appcli "bank-app/internal/app-cli"
 	"bank-app/internal/config"
-	db "bank-app/internal/db/gen"
+	"bank-app/internal/db"
 	"context"
 	"log/slog"
 
@@ -17,29 +17,33 @@ func main() {
 	ctx := context.Background()
 	logr := config.NewLogger()
 
-	cfg := config.FromEnv()
-
-	db, err := NewDbConn(ctx, cfg.PG_DSN)
+	cfg, err := config.FromEnv()
 	if err != nil {
-		logr.ErrorContext(ctx, "error connecting to database", slog.Any("error", err))
-		panic(err)
+		logr.ErrorContext(ctx, "error fetching config", slog.Any("error", err))
+		return
 	}
 
-	a := app.NewApp(app.Config{
-		Addr: cfg.HTTPAddr,
-		DBTX: db,
-	}, app.WithLogger(logr))
+	logr.InfoContext(ctx, "env", slog.Any("PG_DSN", cfg.PostgresDSN))
+
+	dbtx, err := NewDBTX(ctx, cfg.PostgresDSN)
+	if err != nil {
+		logr.ErrorContext(ctx, "error connecting to postgres instance", slog.Any("error", err))
+		return
+	}
+	repo := db.NewSQLCRepository(dbtx)
+
+	app := appcli.NewApp(repo, appcli.WithLogger(logr))
 
 	logr.InfoContext(ctx, "Starting Wallet REST server...")
 
-	if err := a.Run(ctx); err != nil {
+	if err := app.Run(ctx); err != nil {
 		logr.ErrorContext(ctx, "Error with Wallet REST server", slog.Any("error", err))
 	}
 
 	logr.InfoContext(ctx, "Exiting...")
 }
 
-func NewDbConn(ctx context.Context, dsn string) (db.DBTX, error) {
+func NewDBTX(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	conn, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err
@@ -49,5 +53,5 @@ func NewDbConn(ctx context.Context, dsn string) (db.DBTX, error) {
 		return nil, err
 	}
 
-	return conn, nil
+	return conn, err
 }

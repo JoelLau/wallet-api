@@ -1,4 +1,4 @@
-package repo
+package db
 
 import (
 	db "bank-app/internal/db/gen"

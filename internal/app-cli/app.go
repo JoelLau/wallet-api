@@ -1,11 +1,12 @@
-package app
+package appcli
 
 import (
 	"bank-app/internal/api"
 	genapi "bank-app/internal/api/gen"
-	db "bank-app/internal/db/gen"
+	"bank-app/internal/db"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -15,13 +16,19 @@ import (
 )
 
 type App struct {
-	cfg Config
+	repo db.Repository
 
-	logr *slog.Logger
+	httpAddr string
+	logr     *slog.Logger
 }
 
-func NewApp(cfg Config, opts ...OptFunc) *App {
-	app := &App{cfg: cfg, logr: slog.Default()}
+// validate config here. fail early!
+func NewApp(repo db.Repository, opts ...OptFunc) *App {
+	app := &App{
+		repo:     repo,
+		logr:     slog.Default(),
+		httpAddr: ":8080",
+	}
 
 	for _, opt := range opts {
 		opt(app)
@@ -30,15 +37,19 @@ func NewApp(cfg Config, opts ...OptFunc) *App {
 	return app
 }
 
+// should be as fast as possible. should already be configured.
 func (app *App) Run(ctx context.Context) error {
 	cctx := context.WithoutCancel(ctx)
 
-	server := api.NewServer(db.New(app.cfg.DBTX))
+	server := api.NewServer(app.repo)
+	handler := NewHandler(server)
 
 	httpServer := &http.Server{
-		Handler: NewHandler(server),
-		Addr:    app.cfg.Addr,
+		Handler: handler,
+		Addr:    app.httpAddr,
 	}
+
+	app.logr.InfoContext(ctx, fmt.Sprintf("listening on %s", httpServer.Addr))
 
 	if err := httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
 		app.logr.InfoContext(cctx, "server shutdown")
@@ -62,7 +73,7 @@ func NewRouter() *chi.Mux {
 	// see more: https://github.com/go-chi/chi/blob/d7034fdfdaefd10f1bc1a7b813bc979f2eda3a36/README.md?plain=1#L86-L95
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
+	r.Use(middleware.Logger) // TODO: replace logger
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(2 * time.Second))
 

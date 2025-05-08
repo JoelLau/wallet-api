@@ -12,8 +12,8 @@ func NewLogger() *slog.Logger {
 		slog.NewTextHandler(
 			os.Stderr,
 			&slog.HandlerOptions{
-				AddSource: true,
-				Level:     slog.LevelDebug,
+				// AddSource: true,
+				Level: slog.LevelDebug,
 			},
 		),
 	)

@@ -13,7 +13,11 @@ func main() {
 	ctx := context.Background()
 	logr := config.NewLogger()
 
-	cfg := config.FromEnv()
+	cfg, err := config.FromEnv()
+	if err != nil {
+		panic(err)
+	}
+
 	m := migrate.NewMigrate(cfg, migrate.WithLogger(logr))
 
 	logr.InfoContext(ctx, "starting goose migration...")

@@ -9,7 +9,9 @@ import (
 )
 
 func (m *Migrate) Run(ctx context.Context) error {
-	db, err := sql.Open(PostgresDriver, m.cfg.PG_DSN)
+	goose.SetLogger(NewGooseSlogger(m.logr))
+
+	db, err := sql.Open(PostgresDriver, m.cfg.PostgresDSN)
 	if err != nil {
 		return fmt.Errorf("failed to open DB instance: %w", err)
 	}

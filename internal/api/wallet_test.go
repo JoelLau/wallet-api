@@ -1,125 +1,50 @@
 package api_test
 
-// import (
-// 	"bank-app/internal/api"
-// 	"fmt"
-// 	"io"
-// 	"net/http"
-// 	"net/http/httptest"
-// 	"testing"
+import (
+	"bank-app/internal/config"
+	"bank-app/internal/db"
+	"bank-app/internal/migrate"
+	testutils "bank-app/internal/test-utils"
+	"io"
+	"log/slog"
+	"testing"
 
-// 	"github.com/stretchr/testify/require"
-// )
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/require"
+)
 
-// func TestCreateWallet(t *testing.T) {
-// 	t.Parallel()
+func TestCreateWallet(t *testing.T) {
+	t.Parallel()
 
-// 	walletID := "some-uuid"
+	ctx := t.Context()
 
-// 	req := httptest.NewRequest(
-// 		http.MethodGet,
-// 		fmt.Sprintf("/api/v1/wallets/%s", walletID),
-// 		nil,
-// 	)
-// 	w := httptest.NewRecorder()
+	dsn := testutils.NewTestDB(t)
 
-// 	s := api.NewServer()
-// 	s.CreateWallet(w, req)
+	conn, err := pgx.Connect(ctx, dsn)
+	require.NoError(t, err)
 
-// 	resp := w.Result()
-// 	_, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
+	repo := db.NewSQLCRepository(conn)
 
-// 	require.Equal(t, http.StatusCreated, resp.StatusCode)
-// }
+	m := migrate.NewMigrate(config.Config{
+		PostgresDSN: dsn,
+		MirationDir: "../../internal/db/migrations/",
+	}, migrate.WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil))))
 
-// func TestCreateWalletDeposit(t *testing.T) {
-// 	t.Parallel()
+	err = m.Run(ctx)
+	require.NoError(t, err)
 
-// 	walletID := "some-uuid"
+	var originalCount int
+	conn.QueryRow(ctx, "SELECT COUNT(*) FROM wallets;").
+		Scan(&originalCount)
+	require.Equal(t, 0, originalCount)
 
-// 	req := httptest.NewRequest(
-// 		http.MethodGet,
-// 		fmt.Sprintf("/api/v1/wallets/%s", walletID),
-// 		nil,
-// 	)
-// 	w := httptest.NewRecorder()
+	w, err := repo.CreateWallet(ctx)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), w.ID)
+	require.False(t, w.CreatedAt.IsZero())
 
-// 	s := api.NewServer()
-// 	s.CreateWalletDeposit(w, req, walletID)
-
-// 	resp := w.Result()
-// 	_, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
-
-// 	require.Equal(t, http.StatusOK, resp.StatusCode)
-// }
-
-// func TestCreateWalletWithdrawal(t *testing.T) {
-// 	t.Parallel()
-
-// 	walletID := "some-uuid"
-
-// 	req := httptest.NewRequest(
-// 		http.MethodGet,
-// 		fmt.Sprintf("/api/v1/wallets/%s", walletID),
-// 		nil,
-// 	)
-// 	w := httptest.NewRecorder()
-
-// 	s := api.NewServer()
-// 	s.CreateWalletWithdrawal(w, req, walletID)
-
-// 	resp := w.Result()
-// 	_, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
-
-// 	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// }
-
-// func TestGetWalletBalance(t *testing.T) {
-// 	t.Parallel()
-
-// 	walletID := "some-uuid"
-
-// 	req := httptest.NewRequest(
-// 		http.MethodGet,
-// 		fmt.Sprintf("/api/v1/wallets/%s", walletID),
-// 		nil,
-// 	)
-// 	w := httptest.NewRecorder()
-
-// 	s := api.NewServer()
-// 	s.GetWalletBalance(w, req, walletID)
-
-// 	resp := w.Result()
-// 	_, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
-
-// 	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// }
-
-// func TestGetWalletTransactions(t *testing.T) {
-// 	t.Parallel()
-
-// 	walletID := "some-uuid"
-
-// 	req := httptest.NewRequest(
-// 		http.MethodGet,
-// 		fmt.Sprintf("/api/v1/wallets/%s", walletID),
-// 		nil,
-// 	)
-// 	w := httptest.NewRecorder()
-
-// 	s := api.NewServer()
-// 	s.GetWalletTransactions(w, req, walletID)
-
-// 	resp := w.Result()
-// 	_, err := io.ReadAll(resp.Body)
-// 	require.NoError(t, err)
-
-// 	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-// }
+	var newCount int
+	conn.QueryRow(ctx, "SELECT COUNT(*) FROM wallets;").
+		Scan(&newCount)
+	require.Equal(t, 1, newCount)
+}

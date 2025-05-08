@@ -15,7 +15,7 @@ type Migrate struct {
 }
 
 func NewMigrate(cfg config.Config, opts ...OptFunc) *Migrate {
-	m := &Migrate{cfg: cfg}
+	m := &Migrate{cfg: cfg, logr: slog.Default()}
 
 	for _, opt := range opts {
 		opt(m)

@@ -1,6 +1,7 @@
-package app
+package appcli
 
 import (
+	repo "bank-app/internal/db"
 	db "bank-app/internal/db/gen"
 	"log/slog"
 )
@@ -13,7 +14,14 @@ func WithLogger(logr *slog.Logger) OptFunc {
 	}
 }
 
+func WithHTTPAddress(addr string) OptFunc {
+	return func(a *App) {
+		a.httpAddr = addr
+	}
+}
+
 type Config struct {
 	Addr string // e.g. ":8080"
 	DBTX db.DBTX
+	Repo repo.Repository
 }
